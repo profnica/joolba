@@ -4,8 +4,13 @@ from django.utils.http import urlsafe_base64_encode
 from django.contrib.auth.tokens import default_token_generator
 from django.urls import reverse
 from joolbabackend.settings import EMAIL_HOST_USER
+from rest_framework.authtoken.models import Token
+from django.db import IntegrityError
 
 
+# this is file contains functions i might need 
+
+# send verification mail
 
 def send_verification_mail(current_site, user):
     uid = urlsafe_base64_encode(force_bytes(user.pk))
@@ -17,3 +22,13 @@ def send_verification_mail(current_site, user):
     from_email = EMAIL_HOST_USER
     recipient_list = [user.email]
     send_mail(subject, message, from_email, recipient_list)
+
+
+# create token for users on sign up
+def create_token_for_user(user):
+    try:
+        token = Token.objects.create(user=user)
+    except IntegrityError:
+        token = Token.objects.get(user=user)
+
+    return token
