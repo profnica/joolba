@@ -2,8 +2,31 @@ from rest_framework import serializers
 from django.contrib.auth import get_user_model
 from .validators import email_validator
 
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+from rest_framework_simplejwt.views import TokenObtainPairView
+
+
+# customize token claim
+class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
+    @classmethod
+    def get_token(cls, user):
+        token = super().get_token(user)
+
+        # Add custom claims
+        token['email'] = user.email
+        # ...
+
+        return token
+
 
 User = get_user_model()
+
+class UserSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = User
+        fields = '__all__'
+
 
 class UserRegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, required=True)
@@ -40,3 +63,7 @@ class UserRegisterSerializer(serializers.ModelSerializer):
             
         
         return attrs
+
+    def create(self, validated_data):
+        user = User.objects.create_user(**validated_data)
+        return user
