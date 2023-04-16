@@ -1,82 +1,45 @@
-from django.shortcuts import render
-from .models import *
-from .serializers import *
-from rest_framework import generics
-from rest_framework.response import Response
-from rest_framework.views import APIView
-from .serializers import MyTokenObtainPairSerializer
-from rest_framework.permissions import AllowAny
-from rest_framework_simplejwt.views import TokenObtainPairView
-from rest_framework import status, permissions
-from rest_framework.permissions import IsAuthenticated
+from django.db import IntegrityError
 from rest_framework import status
-from rest_framework import viewsets
-# from django.contrib.auth import get_user_model
-# User = get_user_model()
+from rest_framework.authtoken.models import Token
+from .serializers import UserRegisterSerializer
+from django.contrib.auth import get_user_model
+from rest_framework.generics import CreateAPIView, views
+from rest_framework.response import Response
+from .utils import send_verification_mail
+
+User = get_user_model()
 
 
-class MyObtainTokenPairView(TokenObtainPairView):
-    permission_classes = (AllowAny,)
-    serializer_class = MyTokenObtainPairSerializer
+class AccountVerification(views.APIView):
+    def get(self, request):
+        return Response({'message': 'Account verified!'})
 
+class UserRegister(CreateAPIView):
+    serializer_class = UserRegisterSerializer
 
-class UserViewAPI(viewsets.ModelViewSet):
-    queryset = User.objects.all()
-    serializer_class = UserSerializer
-
-
-class RegisterView(viewsets.ModelViewSet):
-    queryset = User.objects.all()
-    serializer_class = RegisterSerializer
-
-
-class LogoutAndBlacklistRefreshToken(APIView):
-    permission_classes = (IsAuthenticated,)
-
-    def post(self, request):
-        try:
-            refresh_token = request.data['refresh_token']
-            token = RefreshToken(refresh_token)
-            token.blacklist()
-            return Response(status=status.HTTP_205_RESET_CONTENT)
-        except Exception as e:
-            return Response(status=status.HTTP_400_BAD_REQUEST)
-
-
-class LogoutAllView(APIView):
-    permission_classes = (IsAuthenticated,)
-
-    def post(self, request):
-        tokens = OutstandingToken.objects.filter(user_id=request.user.id)
-        for token in tokens:
-            t, _ = BlacklistedToken.objects.get_or_create(token=token)
-
-        return Response(status=status.HTTP_205_RESET_CONTENT)
-
-
-class ChangePasswordView(generics.UpdateAPIView):
-    serializer_class = ChangePasswordSerializer
-    model = User
-
-    def get_object(self, queryset=None):
-        id = self.kwargs['number']
-        obj = User.objects.get(phone_number=id)
-        return obj
-
-    def update(self, request, *args, **kwargs):
-        self.object = self.get_object()
+    def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         if serializer.is_valid():
-            if not self.object.check_password(serializer.data.get("old_password")):
-                return Response({"old_password": ["Wrong password."]}, status=status.HTTP_400_BAD_REQUEST)
-            self.object.set_password(serializer.data.get("new_password"))
-            self.object.save()
-            response = {
-                'status': 'success',
-                'code': status.HTTP_200_OK,
-                'message': 'Password updated successfully',
-                'data': []
-            }
+            user = serializer.save()
 
-            return Response(response)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            # create tokens for each users that will be returned as a response
+            try:
+                token = Token.objects.create(user=user)
+            except IntegrityError:
+                token = Token.objects.get(user=user)
+                return Response({'error':'token must be unique for each user'}, status=status.HTTP_400_BAD_REQUEST)
+
+            # get the domain name of the site
+            current_site = request.get_host()
+            
+            # send mail
+            send_verification_mail(current_site, user)
+
+            return Response({
+                'token':token.key,
+                'user': serializer.data,
+                'message':'sign up successful! A verification mail has been sent to your email, please click on the mail'
+                }, status=status.HTTP_201_CREATED)
+        else:
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
