@@ -41,11 +41,14 @@ INSTALLED_APPS = [
     'rest_framework',
     'corsheaders',
     'rest_framework_simplejwt',
+    'django_elasticsearch_dsl',
+    'django_elasticsearch_dsl_drf',
     'rest_framework_simplejwt.token_blacklist',
     'authentications',
     'news',
     'sections',
     'userprofile',
+    'Blogs',
 ]
 
 MIDDLEWARE = [
@@ -57,9 +60,10 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'django_elasticsearch_dsl_drf.middleware.ElasticsearchConnectionErrorMiddleware',
 ]
 
-ROOT_URLCONF = 'joolbabackend.urls'
+ROOT_URLCONF = 'joolbabackend.urls'  
 
 TEMPLATES = [
     {
@@ -161,3 +165,12 @@ SIMPLE_JWT = {
     'UPDATE_LAST_LOGIN': True,
 
 }
+
+# settings.py
+ELASTICSEARCH_DSL = {
+    'default': {
+        'hosts': 'localhost:9200'
+    },
+}
+
+
