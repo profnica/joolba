@@ -207,6 +207,9 @@ ELASTICSEARCH_DSL = {
     },
 }
 
+SEARCH_BACKEND = 'django_elasticsearch_dsl_drf.backends.ElasticsearchDSLSearchBackend'
+
+
 
 
 # email configuration
