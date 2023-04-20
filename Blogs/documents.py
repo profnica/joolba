@@ -6,8 +6,8 @@ from .models import Article, Category, Author
 
 @registry.register_document
 class AuthorDocument(Document):
-    id = fields.IntegerField()
-
+    # id = fields.IntegerField()
+    
     class Index:
         name = 'author'
         settings = {
@@ -18,6 +18,7 @@ class AuthorDocument(Document):
     class Django:
         model = Author
         fields = [
+            'id',
             'name',
         ]
         
@@ -42,13 +43,14 @@ class CategoryDocument(Document):
         
 @registry.register_document
 class ArticleDocument(Document):
-    title = fields.TextField()
-    content = fields.TextField()
-    category = fields.ObjectField(properties={
-        'name': fields.TextField()
-    })
     author = fields.ObjectField(properties={
-        'name': fields.TextField()
+        'id': fields.IntegerField(),
+        'name': fields.TextField(),
+    })
+    categories = fields.ObjectField(properties={
+        'id': fields.IntegerField(),
+        'name': fields.TextField(),
+        'description': fields.TextField(),
     })
 
     class Index:
@@ -61,9 +63,9 @@ class ArticleDocument(Document):
     class Django:
         model = Article
         fields = [
-            'id',
             'title',
             'content',
-            'category',
+            'created_datetime',
+            'updated_datetime',
         ]
 
